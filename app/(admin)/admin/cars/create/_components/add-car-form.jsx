@@ -46,6 +46,7 @@ const bodyTypes = [
   "Pickup",
 ];
 const carStatuses = ["AVAILABLE", "UNAVAILABLE", "SOLD"];
+const MAX_IMAGE_PAYLOAD_SIZE = 20 * 1024 * 1024;
 
 // Define form schema with Zod
 const carFormSchema = z.object({
@@ -61,6 +62,10 @@ const carFormSchema = z.object({
     .refine(
       (val) => !isNaN(parseFloat(val)) && parseFloat(val) > 0,
       "Enter a valid price"
+    )
+    .refine(
+      (val) => parseFloat(val) < 100_000_000,
+      "Price must be less than $100,000,000"
     ),
   mileage: z
     .string()
@@ -178,6 +183,8 @@ export const AddCarForm = () => {
 
       // Switch to manual tab for the user to review and fill in missing details
       setActiveTab("manual");
+    } else if (processImageResult?.success === false) {
+      toast.error(processImageResult.error || "Failed to extract car details");
     }
   }, [processImageResult, setValue, uploadedAiImage]);
 
@@ -284,6 +291,17 @@ export const AddCarForm = () => {
     // Check if images are uploaded
     if (uploadedImages.length === 0) {
       setImageError("Please upload at least one image");
+      return;
+    }
+
+    const imagePayloadSize = uploadedImages.reduce(
+      (total, image) => total + image.length,
+      0
+    );
+    if (imagePayloadSize > MAX_IMAGE_PAYLOAD_SIZE) {
+      toast.error(
+        "Images are too large to submit together. Remove some images or use smaller files."
+      );
       return;
     }
 

@@ -109,14 +109,23 @@ export async function processCarImageWithAI(file) {
       };
     }
   } catch (error) {
-    console.error();
-    throw new Error("Gemini API error:" + error.message);
+    console.error("Car image analysis failed:", error);
+    const message = error instanceof Error ? error.message : String(error);
+    return {
+      success: false,
+      error: `Gemini API error: ${message}`,
+    };
   }
 }
 
 // Add a car to the database with images
 export async function addCar({ carData, images }) {
   try {
+    const price = Number(carData.price);
+    if (!Number.isFinite(price) || price <= 0 || price >= 100_000_000) {
+      throw new Error("Price must be greater than $0 and less than $100,000,000");
+    }
+
     const { userId } = await auth();
     if (!userId) throw new Error("Unauthorized");
 
@@ -187,7 +196,7 @@ export async function addCar({ carData, images }) {
         make: carData.make,
         model: carData.model,
         year: carData.year,
-        price: carData.price,
+        price,
         mileage: carData.mileage,
         color: carData.color,
         fuelType: carData.fuelType,
